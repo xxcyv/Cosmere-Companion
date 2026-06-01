@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reading Grid Map</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-row">
+        <div>
+          <h1 id="app-title">Cosmere Reading Order Companion</h1>
+          <p id="app-subtitle">Which book should you read next?</p>
+        </div>
+        <label class="language-toggle" for="german-mode">
+          <span id="german-mode-label">German mode</span>
+          <input type="checkbox" id="german-mode" />
+        </label>
+      </div>
+    </header>
+
+    <section class="legend" aria-label="legend">
+      <div class="legend-block legend-line-styles">
+        <h2 id="legend-line-styles-title">Line Styles and Meaning</h2>
+        <div class="legend-items">
+          <span class="legend-item">
+            <span class="legend-line required"></span>
+            <strong id="legend-required-label">Required:</strong>
+            <span id="legend-required-text">Must read to understand the story.</span>
+          </span>
+          <span class="legend-item">
+            <span class="legend-line recommended"></span>
+            <strong id="legend-recommended-label">Recommended:</strong>
+            <span id="legend-recommended-text">Avoid spoilers or understand subplots or major references.</span>
+          </span>
+          <span class="legend-item">
+            <span class="legend-line nice-to-have"></span>
+            <strong id="legend-nice-label">Nice to have:</strong>
+            <span id="legend-nice-text">Understand minor references or bigger eastereggs.</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="legend-block legend-click-note" id="legend-click-note-block">
+        <h2 id="legend-click-title">Click Filtering</h2>
+        <p class="legend-note" id="legend-click-left-text"><strong>Left-click:</strong> Shows dependency overview for a specific book, including what leads to it.</p>
+        <p class="legend-note" id="legend-click-right-text"><strong>Right-click:</strong> Helps find your next read by showing direct right-side dependencies of books you already read. Right-click multiple books to combine.</p>
+      </div>
+
+      <div class="legend-block legend-german-note hidden" id="legend-german-note-block">
+        <h2 id="legend-german-title">German Availability</h2>
+        <p class="legend-note" id="legend-german-text">* Entries marked with an asterisk are not available in German.</p>
+      </div>
+
+      <div class="legend-block legend-arcanum-note" id="legend-arcanum-note-block">
+        <h2 id="legend-arcanum-title">Arcanum Note</h2>
+        <p class="legend-note" id="legend-arcanum-text">* Entries marked with an asterisk are included in Arcanum Unbounded.</p>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="filters">
+      <label class="control" for="filter-link-mode">
+        <span id="filter-link-label">Link display</span>
+        <select id="filter-link-mode">
+          <option value="all" id="filter-link-all">All link types</option>
+          <option value="required" id="filter-link-required">Show only required links</option>
+          <option value="required_recommended" id="filter-link-required-recommended">Show required + recommended links</option>
+        </select>
+      </label>
+      <label class="control">
+        <input type="checkbox" id="filter-novels" />
+        <span id="filter-novels-label">Show only Novels</span>
+      </label>
+      <label class="control">
+        <input type="checkbox" id="filter-novellas" />
+        <span id="filter-novellas-label">Show only Novellas</span>
+      </label>
+      <button id="clear-focus" type="button">Clear selected book</button>
+    </section>
+
+    <main class="board-wrap">
+      <div id="board" class="board" aria-live="polite"></div>
+    </main>
+
+    <template id="book-template">
+      <button class="book" type="button"></button>
+    </template>
+
+    <script src="data/books-data.js"></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>
