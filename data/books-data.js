@@ -100,7 +100,7 @@ window.BOOK_DATA = {
         { "id": "bands-of-mourning", "type": "required" },
         { "id": "mistborn-secret-history", "type": "recommended" },
         { "id": "elantris", "type": "recommended" },
-        { "id": "emperor's-soul", "type": "recommended" },
+        { "id": "emperors-soul", "type": "recommended" },
         { "id": "tress-of-the-emerald-sea", "type": "recommended" }
       ]
     },
