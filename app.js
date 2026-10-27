@@ -350,16 +350,20 @@ function applyLanguage(graph) {
   document.body.classList.toggle("german-mode", state.isGerman);
 
   for (const [element, key] of TEXT_BINDINGS) {
-    element.textContent = text[key];
+    if (element) {
+      element.textContent = text[key];
+    }
   }
   for (const [element, key] of HTML_BINDINGS) {
-    element.innerHTML = text[key];
+    if (element) {
+      element.innerHTML = text[key];
+    }
   }
 
   applyDynamicLabelColumnWidths(graph);
 
-  uiRefs.legendArcanumBlock.classList.toggle("hidden", state.isGerman);
-  uiRefs.legendGermanBlock.classList.toggle("hidden", !state.isGerman || !hasGermanUnavailableBooks(graph));
+  uiRefs.legendArcanumBlock?.classList.toggle("hidden", state.isGerman);
+  uiRefs.legendGermanBlock?.classList.toggle("hidden", !state.isGerman || !hasGermanUnavailableBooks(graph));
 }
 
 function applyDynamicLabelColumnWidths(graph) {
