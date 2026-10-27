@@ -50,6 +50,38 @@ const uiRefs = {
   filterNovellasLabel: document.getElementById("filter-novellas-label"),
 };
 
+// [element, copy key] pairs applied as plain text (or HTML for the notes below) on language change.
+const TEXT_BINDINGS = [
+  [uiRefs.appTitle, "appTitle"],
+  [uiRefs.appSubtitle, "appSubtitle"],
+  [uiRefs.germanModeLabel, "germanModeLabel"],
+  [uiRefs.legendLineStylesTitle, "legendLineStylesTitle"],
+  [uiRefs.legendRequiredLabel, "requiredLabel"],
+  [uiRefs.legendRequiredText, "requiredText"],
+  [uiRefs.legendRecommendedLabel, "recommendedLabel"],
+  [uiRefs.legendRecommendedText, "recommendedText"],
+  [uiRefs.legendNiceLabel, "niceLabel"],
+  [uiRefs.legendNiceText, "niceText"],
+  [uiRefs.legendArcanumTitle, "arcanumTitle"],
+  [uiRefs.legendGermanTitle, "germanTitle"],
+  [uiRefs.legendClickTitle, "clickTitle"],
+  [uiRefs.legendClickLeftText, "clickLeftText"],
+  [uiRefs.legendClickRightText, "clickRightText"],
+  [uiRefs.filterLinkLabel, "filterLinkLabel"],
+  [uiRefs.filterLinkAll, "filterLinkAll"],
+  [uiRefs.filterLinkRequired, "filterLinkRequired"],
+  [uiRefs.filterLinkRequiredRecommended, "filterLinkRequiredRecommended"],
+  [uiRefs.filterNovelsLabel, "filterNovels"],
+  [uiRefs.filterNovellasLabel, "filterNovellas"],
+  [clearFocusBtn, "clearFocus"],
+];
+
+// Notes contain markup (<sup>), so they are set via innerHTML from trusted static copy.
+const HTML_BINDINGS = [
+  [uiRefs.legendArcanumText, "arcanumText"],
+  [uiRefs.legendGermanText, "germanText"],
+];
+
 // Global UI state used by rendering and filters.
 const state = {
   focusId: null,
@@ -321,30 +353,12 @@ function applyLanguage(graph) {
   document.title = text.pageTitle;
   document.body.classList.toggle("german-mode", state.isGerman);
 
-  uiRefs.appTitle.textContent = text.appTitle;
-  uiRefs.appSubtitle.textContent = text.appSubtitle;
-  uiRefs.germanModeLabel.textContent = text.germanModeLabel;
-  uiRefs.legendLineStylesTitle.textContent = text.legendLineStylesTitle;
-  uiRefs.legendRequiredLabel.textContent = text.requiredLabel;
-  uiRefs.legendRequiredText.textContent = text.requiredText;
-  uiRefs.legendRecommendedLabel.textContent = text.recommendedLabel;
-  uiRefs.legendRecommendedText.textContent = text.recommendedText;
-  uiRefs.legendNiceLabel.textContent = text.niceLabel;
-  uiRefs.legendNiceText.textContent = text.niceText;
-  uiRefs.legendArcanumTitle.textContent = text.arcanumTitle;
-  uiRefs.legendArcanumText.innerHTML = text.arcanumText;
-  uiRefs.legendGermanTitle.textContent = text.germanTitle;
-  uiRefs.legendGermanText.innerHTML = text.germanText;
-  uiRefs.legendClickTitle.textContent = text.clickTitle;
-  uiRefs.legendClickLeftText.textContent = text.clickLeftText;
-  uiRefs.legendClickRightText.textContent = text.clickRightText;
-  uiRefs.filterLinkLabel.textContent = text.filterLinkLabel;
-  uiRefs.filterLinkAll.textContent = text.filterLinkAll;
-  uiRefs.filterLinkRequired.textContent = text.filterLinkRequired;
-  uiRefs.filterLinkRequiredRecommended.textContent = text.filterLinkRequiredRecommended;
-  uiRefs.filterNovelsLabel.textContent = text.filterNovels;
-  uiRefs.filterNovellasLabel.textContent = text.filterNovellas;
-  clearFocusBtn.textContent = text.clearFocus;
+  for (const [element, key] of TEXT_BINDINGS) {
+    element.textContent = text[key];
+  }
+  for (const [element, key] of HTML_BINDINGS) {
+    element.innerHTML = text[key];
+  }
 
   applyDynamicLabelColumnWidths(graph);
 
@@ -364,25 +378,26 @@ function applyDynamicLabelColumnWidths(graph) {
   const settingFontSize = rootFontSize * 0.82;
   const fontFamily = bodyStyles.fontFamily || "Segoe UI, Tahoma, Geneva, Verdana, sans-serif";
   const seriesFont = `700 ${seriesFontSize}px ${fontFamily}`;
-  const font = `400 ${settingFontSize}px ${fontFamily}`;
-  const seriesLabels = Array.from(new Set(graph.rows.map((row) => getSeriesLabel(row.series))));
-  const longestSeriesWordWidth = Math.max(
-    ...seriesLabels
-      .flatMap((seriesLabel) => seriesLabel.split(/\s+/).filter(Boolean).map((word) => measureTextWidth(word, seriesFont))),
-    0,
-  );
-  const maxWordWidth = Math.max(
-    ...graph.rows.flatMap((row) => getSettingLabel(row.setting).split(/\s+/).filter(Boolean).map((word) => measureTextWidth(word, font))),
-    0,
-  );
+  const settingFont = `400 ${settingFontSize}px ${fontFamily}`;
 
-  const settingPaddingPx = rootFontSize * 1.1;
+  // Labels wrap at spaces, so the longest single word determines the minimum column width.
+  const longestWordWidth = (labels, font) => Math.max(
+    ...labels.flatMap((label) => label.split(/\s+/).filter(Boolean).map((word) => measureTextWidth(word, font))),
+    0,
+  );
+  const seriesLabels = Array.from(new Set(graph.rows.map((row) => getSeriesLabel(row.series))));
+  const settingLabels = graph.rows.map((row) => getSettingLabel(row.setting));
+
   const seriesPaddingPx = rootFontSize * 0.85;
-  const requiredSeriesWidth = Math.ceil(longestSeriesWordWidth + seriesPaddingPx);
-  const finalSeriesWidth = Math.max(defaultSeriesWidth, requiredSeriesWidth);
-  const paddingPx = settingPaddingPx;
-  const requiredSettingWidth = Math.ceil(maxWordWidth + paddingPx);
-  const finalSettingWidth = Math.max(defaultSettingWidth, requiredSettingWidth);
+  const settingPaddingPx = rootFontSize * 1.1;
+  const finalSeriesWidth = Math.max(
+    defaultSeriesWidth,
+    Math.ceil(longestWordWidth(seriesLabels, seriesFont) + seriesPaddingPx),
+  );
+  const finalSettingWidth = Math.max(
+    defaultSettingWidth,
+    Math.ceil(longestWordWidth(settingLabels, settingFont) + settingPaddingPx),
+  );
 
   document.body.style.setProperty("--series-col-w", `${finalSeriesWidth}px`);
   document.body.style.setProperty("--setting-col-w", `${finalSettingWidth}px`);
@@ -524,17 +539,19 @@ function buildSeriesPalette(data, books) {
 
 function buildRowLayout(rowSlotCounts) {
   // Converts per-row slot counts into cumulative grid row starts.
+  // Every row occupies at least one slot, even if it contains no books.
+  const normalizedCounts = rowSlotCounts.map((count) => Math.max(1, count));
   const rowStarts = [];
   let cursor = 0;
 
-  for (let i = 0; i < rowSlotCounts.length; i += 1) {
+  for (const count of normalizedCounts) {
     rowStarts.push(cursor);
-    cursor += Math.max(1, rowSlotCounts[i]);
+    cursor += count;
   }
 
   return {
     rowStarts,
-    rowSlotCounts: rowSlotCounts.map((count) => Math.max(1, count)),
+    rowSlotCounts: normalizedCounts,
     totalSlots: cursor,
   };
 }
@@ -548,6 +565,7 @@ function buildRows(books, data) {
   const settingRank = new Map(settingOrder.map((v, i) => [v, i]));
   const keySet = new Set(books.map((book) => getRowKey(book.series, book.setting)));
 
+  // Unlisted series/settings sort last; ties fall back to alphabetical order.
   const rowItems = Array.from(keySet)
     .map((key) => {
       const [series, setting] = key.split(ROW_KEY_SEPARATOR);
@@ -555,16 +573,16 @@ function buildRows(books, data) {
         key,
         series,
         setting,
-        sr: seriesRank.has(series) ? seriesRank.get(series) : Number.MAX_SAFE_INTEGER,
-        tr: settingRank.has(setting) ? settingRank.get(setting) : Number.MAX_SAFE_INTEGER,
+        seriesRank: seriesRank.has(series) ? seriesRank.get(series) : Number.MAX_SAFE_INTEGER,
+        settingRank: settingRank.has(setting) ? settingRank.get(setting) : Number.MAX_SAFE_INTEGER,
       };
     })
     .sort((a, b) => {
-      if (a.sr !== b.sr) {
-        return a.sr - b.sr;
+      if (a.seriesRank !== b.seriesRank) {
+        return a.seriesRank - b.seriesRank;
       }
-      if (a.tr !== b.tr) {
-        return a.tr - b.tr;
+      if (a.settingRank !== b.settingRank) {
+        return a.settingRank - b.settingRank;
       }
       if (a.setting !== b.setting) {
         return a.setting.localeCompare(b.setting);
@@ -594,6 +612,7 @@ function placeBooks(books, edges, rows) {
     .map((b) => b.id)
     .sort();
 
+  // Kahn's algorithm; the queue is re-sorted (row, then title) so the order is deterministic.
   const topologicalOrderIds = [];
   while (zeroIndegreeIds.length) {
     zeroIndegreeIds.sort((idA, idB) => {
@@ -624,10 +643,11 @@ function placeBooks(books, edges, rows) {
   const columnEntries = new Map();
   let maxCol = 0;
 
+  // Record which rows mix novels with novellas/short stories.
   for (const book of books) {
     const row = rows.rowIndexByKey.get(getRowKey(book.series, book.setting));
     const flags = rowHasBothFormats.get(row);
-    if (book.format === "Novel") {
+    if (book.format === FORMAT_NOVEL) {
       flags.hasNovel = true;
     }
     if (isNovellaLike(book.format)) {
@@ -635,21 +655,20 @@ function placeBooks(books, edges, rows) {
     }
   }
 
+  // Column = one step right of the right-most prerequisite; books are then grouped per (row, column) cell.
   for (const id of topologicalOrderIds) {
     const book = booksById.get(id);
     const row = rows.rowIndexByKey.get(getRowKey(book.series, book.setting));
-    let minCol = 0;
+    let col = 0;
 
     for (const pre of incoming.get(id)) {
-      const preCol = positions.get(pre).col;
-      minCol = Math.max(minCol, preCol + 1);
+      col = Math.max(col, positions.get(pre).col + 1);
     }
 
-    const col = minCol;
-    const formatKey = isNovellaLike(book.format) ? "Novella" : "Novel";
+    const formatKey = isNovellaLike(book.format) ? FORMAT_NOVELLA : FORMAT_NOVEL;
     const columnKey = `${row}:${col}`;
     if (!columnEntries.has(columnKey)) {
-      columnEntries.set(columnKey, { row, col, Novel: [], Novella: [] });
+      columnEntries.set(columnKey, { row, col, [FORMAT_NOVEL]: [], [FORMAT_NOVELLA]: [] });
     }
 
     // Books of one format sharing identical dependencies form one group.
@@ -669,6 +688,7 @@ function placeBooks(books, edges, rows) {
     maxCol = Math.max(maxCol, col);
   }
 
+  // Assign vertical stack positions inside each cell.
   for (const entry of columnEntries.values()) {
     const formatFlags = rowHasBothFormats.get(entry.row);
     const hasBothFormats = formatFlags.hasNovel && formatFlags.hasNovella;
@@ -680,9 +700,10 @@ function placeBooks(books, edges, rows) {
       });
     };
 
+    // Rows with a single format simply stack novel groups first, then novella groups.
     if (!hasBothFormats) {
       let cursor = 0;
-      for (const formatKey of ["Novel", "Novella"]) {
+      for (const formatKey of [FORMAT_NOVEL, FORMAT_NOVELLA]) {
         for (const group of entry[formatKey]) {
           assign(group.ids, cursor);
           cursor += group.ids.length;
@@ -692,11 +713,13 @@ function placeBooks(books, edges, rows) {
     }
 
     // Pair the k-th novel group with the k-th novella group; novellas sit directly below the novels.
-    const pairCount = Math.max(entry.Novel.length, entry.Novella.length);
+    const novelGroups = entry[FORMAT_NOVEL];
+    const novellaGroups = entry[FORMAT_NOVELLA];
+    const pairCount = Math.max(novelGroups.length, novellaGroups.length);
     let cursor = 0;
     for (let k = 0; k < pairCount; k += 1) {
-      const novelIds = entry.Novel[k] ? entry.Novel[k].ids : [];
-      const novellaIds = entry.Novella[k] ? entry.Novella[k].ids : [];
+      const novelIds = novelGroups[k] ? novelGroups[k].ids : [];
+      const novellaIds = novellaGroups[k] ? novellaGroups[k].ids : [];
       const novelSize = Math.max(1, novelIds.length);
       assign(novelIds, cursor);
       assign(novellaIds, cursor + novelSize);
@@ -723,14 +746,38 @@ function render(graph) {
 
   board.innerHTML = "";
 
-  const bandsLayer = document.createElement("div");
-  bandsLayer.className = "bands-layer";
-  bandsLayer.style.display = "grid";
-  bandsLayer.style.gridTemplateRows = board.style.gridTemplateRows;
-  bandsLayer.style.gridTemplateColumns = board.style.gridTemplateColumns;
+  // Three stacked layers share the board grid: row bands (back), SVG edges, then book boxes (front).
+  const bandsLayer = createGridLayer("bands-layer");
+  graph.rows.forEach((_, index) => bandsLayer.append(createRowBand(graph, index)));
 
-  const arrowsLayer = document.createElementNS(SVG_NS, "svg");
-  arrowsLayer.classList.add("arrows-layer");
+  const arrowsLayer = createArrowsLayer();
+
+  const booksLayer = createGridLayer("books-layer");
+  for (const book of graph.books) {
+    booksLayer.append(createBookElement(graph, book));
+  }
+
+  board.append(bandsLayer, arrowsLayer, booksLayer);
+
+  graph._svg = arrowsLayer;
+  graph._booksLayer = booksLayer;
+  updateVisibility(graph);
+}
+
+function createGridLayer(className) {
+  // Creates a layer that reuses the board's grid tracks.
+  const layer = document.createElement("div");
+  layer.className = className;
+  layer.style.display = "grid";
+  layer.style.gridTemplateRows = board.style.gridTemplateRows;
+  layer.style.gridTemplateColumns = board.style.gridTemplateColumns;
+  return layer;
+}
+
+function createArrowsLayer() {
+  // Creates the SVG layer holding the shared arrowhead marker definition.
+  const layer = document.createElementNS(SVG_NS, "svg");
+  layer.classList.add("arrows-layer");
 
   const defs = document.createElementNS(SVG_NS, "defs");
   const marker = document.createElementNS(SVG_NS, "marker");
@@ -746,79 +793,71 @@ function render(graph) {
   tip.setAttribute("fill", "#2f3844");
   marker.append(tip);
   defs.append(marker);
-  arrowsLayer.append(defs);
+  layer.append(defs);
+  return layer;
+}
 
-  const booksLayer = document.createElement("div");
-  booksLayer.className = "books-layer";
-  booksLayer.style.display = "grid";
-  booksLayer.style.gridTemplateRows = board.style.gridTemplateRows;
-  booksLayer.style.gridTemplateColumns = board.style.gridTemplateColumns;
+function createRowBand(graph, index) {
+  // Builds the colored band and sticky label for one series/setting row.
+  const rowMeta = graph.rows[index];
+  const prevRow = graph.rows[index - 1];
+  const nextRow = graph.rows[index + 1];
+  // Consecutive rows of the same series only show the series name once.
+  const isSeriesStart = !prevRow || prevRow.series !== rowMeta.series;
+  const isSeriesEnd = !nextRow || nextRow.series !== rowMeta.series;
+  const start = graph.rowLayout.rowStarts[index] + 1;
+  const end = start + graph.rowLayout.rowSlotCounts[index];
 
-  for (let i = 0; i < graph.rows.length; i += 1) {
-    const rowMeta = graph.rows[i];
-    const prevRow = i > 0 ? graph.rows[i - 1] : null;
-    const nextRow = i < graph.rows.length - 1 ? graph.rows[i + 1] : null;
-    const isSeriesStart = !prevRow || prevRow.series !== rowMeta.series;
-    const isSeriesEnd = !nextRow || nextRow.series !== rowMeta.series;
-    const start = graph.rowLayout.rowStarts[i] + 1;
-    const end = start + graph.rowLayout.rowSlotCounts[i];
-    const band = document.createElement("div");
-    band.className = "row-band";
-    band.style.gridColumn = "1 / -1";
-    band.style.gridRow = `${start} / ${end}`;
-    band.style.background = graph.seriesPalette[rowMeta.series] || FALLBACK_ROW_BAND_COLOR;
+  const band = document.createElement("div");
+  band.className = "row-band";
+  band.style.gridColumn = "1 / -1";
+  band.style.gridRow = `${start} / ${end}`;
+  band.style.background = graph.seriesPalette[rowMeta.series] || FALLBACK_ROW_BAND_COLOR;
 
-    const label = document.createElement("div");
-    label.className = "row-label";
-    if (isSeriesStart) {
-      label.classList.add("series-start");
+  const label = document.createElement("div");
+  label.className = "row-label";
+  label.classList.toggle("series-start", isSeriesStart);
+  label.classList.toggle("series-end", isSeriesEnd);
+  label.classList.toggle("series-continue", !isSeriesStart);
+  label.innerHTML = `<span class="row-label-series">${isSeriesStart ? escapeHtml(getSeriesLabel(rowMeta.series)) : ""}</span><span class="row-label-setting">${escapeHtml(getSettingLabel(rowMeta.setting))}</span>`;
+  band.append(label);
+  return band;
+}
+
+function createBookElement(graph, book) {
+  // Clones the book template, fills in localized text and wires click handlers.
+  const item = template.content.firstElementChild.cloneNode(true);
+  item.dataset.id = book.id;
+  item.style.gridColumn = `${book.col + 2}`; // Column 1 is the label column.
+  item.style.gridRow = `${book.slotRow + 1}`;
+
+  const titleDisplay = getBookTitleDisplay(book);
+  const lineCount = titleDisplay.lines.length;
+  item.classList.toggle("book-multi-title", lineCount > 1);
+  item.classList.toggle("book-missing-german", titleDisplay.missingGerman);
+
+  // The annotation marker is attached to the last title line only.
+  const markerHtml = titleDisplay.marker ? `<sup class="book-title-marker">${escapeHtml(titleDisplay.marker)}</sup>` : "";
+  const titleLinesHtml = titleDisplay.lines
+    .map((line, index) => `<span class="book-title-line">${escapeHtml(line)}${titleDisplay.marker && index === lineCount - 1 ? markerHtml : ""}</span>`)
+    .join("");
+  item.innerHTML = `<span class="book-title-list">${titleLinesHtml}</span><span class="meta">${escapeHtml(getFormatLabel(book.format))}</span>`;
+
+  // Left-click toggles the dependency focus; right-click toggles the "already read" selection.
+  item.addEventListener("click", () => {
+    state.focusId = state.focusId === book.id ? null : book.id;
+    updateVisibility(graph);
+  });
+  item.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    if (rightClickSelectedIds.has(book.id)) {
+      rightClickSelectedIds.delete(book.id);
+    } else {
+      rightClickSelectedIds.add(book.id);
     }
-    if (isSeriesEnd) {
-      label.classList.add("series-end");
-    }
-    if (!isSeriesStart) {
-      label.classList.add("series-continue");
-    }
-    label.innerHTML = `<span class="row-label-series">${isSeriesStart ? escapeHtml(getSeriesLabel(rowMeta.series)) : ""}</span><span class="row-label-setting">${escapeHtml(getSettingLabel(rowMeta.setting))}</span>`;
-    band.append(label);
-    bandsLayer.append(band);
-  }
-
-  for (const book of graph.books) {
-    const item = template.content.firstElementChild.cloneNode(true);
-    item.dataset.id = book.id;
-    item.style.gridColumn = `${book.col + 2}`;
-    item.style.gridRow = `${book.slotRow + 1}`;
-    const titleDisplay = getBookTitleDisplay(book);
-    item.classList.toggle("book-multi-title", titleDisplay.lines.length > 1);
-    item.classList.toggle("book-missing-german", titleDisplay.missingGerman);
-    const lineCount = titleDisplay.lines.length;
-    const markerHtml = titleDisplay.marker ? `<sup class="book-title-marker">${escapeHtml(titleDisplay.marker)}</sup>` : "";
-    const titleLinesHtml = titleDisplay.lines
-      .map((line, index) => `<span class="book-title-line">${escapeHtml(line)}${titleDisplay.marker && index === lineCount - 1 ? markerHtml : ""}</span>`)
-      .join("");
-    item.innerHTML = `<span class="book-title-list">${titleLinesHtml}</span><span class="meta">${escapeHtml(getFormatLabel(book.format))}</span>`;
-    item.addEventListener("click", () => {
-      state.focusId = state.focusId === book.id ? null : book.id;
-      updateVisibility(graph);
-    });
-    item.addEventListener("contextmenu", (event) => {
-      event.preventDefault();
-      if (rightClickSelectedIds.has(book.id)) {
-        rightClickSelectedIds.delete(book.id);
-      } else {
-        rightClickSelectedIds.add(book.id);
-      }
-      updateVisibility(graph);
-    });
-    booksLayer.append(item);
-  }
-
-  board.append(bandsLayer, arrowsLayer, booksLayer);
-
-  graph._svg = arrowsLayer;
-  graph._booksLayer = booksLayer;
-  updateVisibility(graph);
+    updateVisibility(graph);
+  });
+  return item;
 }
 
 function buildRowSlotHeights(graph, slotHeight, expandedSlotHeight) {
@@ -846,23 +885,10 @@ function updateVisibility(graph) {
 
   const visibleBookMap = new Map();
   for (const book of graph.books) {
-    let visible = true;
-
-    if (state.showNovelsOnly && book.format !== FORMAT_NOVEL) {
-      visible = false;
-    }
-
-    if (state.showNovellasOnly && !isNovellaLike(book.format)) {
-      visible = false;
-    }
-
-    if (relatedSet && !relatedSet.has(book.id)) {
-      visible = false;
-    }
-
-    if (directRelatedSet && !directRelatedSet.has(book.id)) {
-      visible = false;
-    }
+    const visible = !(state.showNovelsOnly && book.format !== FORMAT_NOVEL)
+      && !(state.showNovellasOnly && !isNovellaLike(book.format))
+      && (!relatedSet || relatedSet.has(book.id))
+      && (!directRelatedSet || directRelatedSet.has(book.id));
 
     visibleBookMap.set(book.id, visible);
   }
@@ -916,56 +942,33 @@ function redrawEdges(graph, visibleBookMap) {
       continue;
     }
 
-    const fromVisible = visibleBookMap ? visibleBookMap.get(edge.from) : true;
-    const toVisible = visibleBookMap ? visibleBookMap.get(edge.to) : true;
-
-    let edgeVisible = fromVisible && toVisible;
-    if (!matchesLinkMode(edge.type, state.linkMode)) {
-      edgeVisible = false;
-    }
-
-    if (!edgeVisible) {
-      continue;
-    }
-
-    visibleEdges.push({ edge, src, dst });
-  }
-
-  const outByNode = groupBy(visibleEdges, (item) => item.edge.from);
-  const inByNode = groupBy(visibleEdges, (item) => item.edge.to);
-
-  for (const edges of outByNode.values()) {
-    edges.sort((a, b) => {
-      const ay = centerY(a.dst);
-      const by = centerY(b.dst);
-      if (ay !== by) {
-        return ay - by;
-      }
-      return a.edge.to.localeCompare(b.edge.to);
-    });
-
-    for (let i = 0; i < edges.length; i += 1) {
-      edges[i].outIndex = i;
-      edges[i].outTotal = edges.length;
+    const bothEndsVisible = !visibleBookMap || (visibleBookMap.get(edge.from) && visibleBookMap.get(edge.to));
+    if (bothEndsVisible && matchesLinkMode(edge.type, state.linkMode)) {
+      visibleEdges.push({ edge, src, dst });
     }
   }
 
-  for (const edges of inByNode.values()) {
-    edges.sort((a, b) => {
-      const ay = centerY(a.src);
-      const by = centerY(b.src);
-      if (ay !== by) {
-        return ay - by;
-      }
-      return a.edge.from.localeCompare(b.edge.from);
-    });
+  // Spread edges that share a node vertically so their anchor points do not overlap.
+  assignAnchorSlots(
+    groupBy(visibleEdges, (item) => item.edge.from).values(),
+    (item) => item.dst,
+    (item) => item.edge.to,
+    (item, index, total) => {
+      item.outIndex = index;
+      item.outTotal = total;
+    },
+  );
+  assignAnchorSlots(
+    groupBy(visibleEdges, (item) => item.edge.to).values(),
+    (item) => item.src,
+    (item) => item.edge.from,
+    (item, index, total) => {
+      item.inIndex = index;
+      item.inTotal = total;
+    },
+  );
 
-    for (let i = 0; i < edges.length; i += 1) {
-      edges[i].inIndex = i;
-      edges[i].inTotal = edges.length;
-    }
-  }
-
+  // Parallel edges between the same two books get separate lanes (curve offsets).
   const laneByPair = new Map();
   for (const item of visibleEdges) {
     const pairKey = `${item.edge.from}->${item.edge.to}`;
@@ -996,6 +999,22 @@ function redrawEdges(graph, visibleBookMap) {
     path.setAttribute("d", `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`);
 
     svg.append(path);
+  }
+}
+
+function assignAnchorSlots(groups, getOtherRect, getOtherId, setSlot) {
+  // Orders each group by the other endpoint's vertical position (id as tie-break) and stores index/total.
+  for (const items of groups) {
+    items.sort((a, b) => {
+      const ay = centerY(getOtherRect(a));
+      const by = centerY(getOtherRect(b));
+      if (ay !== by) {
+        return ay - by;
+      }
+      return getOtherId(a).localeCompare(getOtherId(b));
+    });
+
+    items.forEach((item, index) => setSlot(item, index, items.length));
   }
 }
 
@@ -1048,37 +1067,25 @@ function computeDirectlyConnectedBooks(graph, selectedIds, linkMode = LINK_MODE_
     }
   }
 
+  // True if the book has a left-side prerequisite; with `onlyUnselected`, only unselected prerequisites count.
+  const hasLeftDependency = (book, onlyUnselected) => (incomingByTarget.get(book.id) || []).some((edge) => {
+    const dependency = booksById.get(edge.from);
+    if (!dependency || dependency.col >= book.col) {
+      return false;
+    }
+    return !onlyUnselected || !selectedSet.has(edge.from);
+  });
+
   for (const candidateId of rightSideCandidates) {
     const candidate = booksById.get(candidateId);
-    if (!candidate) {
-      continue;
-    }
-
-    const hasUnselectedLeftDependency = (incomingByTarget.get(candidateId) || []).some((edge) => {
-      const dependency = booksById.get(edge.from);
-      if (!dependency) {
-        return false;
-      }
-
-      return dependency.col < candidate.col && !selectedSet.has(edge.from);
-    });
-
-    if (!hasUnselectedLeftDependency) {
+    if (candidate && !hasLeftDependency(candidate, true)) {
       related.add(candidateId);
     }
   }
 
+  // Books without any left-side prerequisite are always starting points.
   for (const book of graph.books) {
-    const hasLeftDependency = (incomingByTarget.get(book.id) || []).some((edge) => {
-      const dependency = booksById.get(edge.from);
-      if (!dependency) {
-        return false;
-      }
-
-      return dependency.col < book.col;
-    });
-
-    if (!hasLeftDependency) {
+    if (!hasLeftDependency(book, false)) {
       related.add(book.id);
     }
   }
