@@ -619,9 +619,9 @@ function placeBooks(books, edges, rows) {
   }
 
   const positions = new Map();
-  const rowFormatColStackSizes = new Map(rows.rowItems.map((_, idx) => [idx, new Map()]));
   const rowHasBothFormats = new Map(rows.rowItems.map((_, idx) => [idx, { hasNovel: false, hasNovella: false }]));
   const rowSlotCounts = Array.from({ length: rows.rowItems.length }, () => 0);
+  const columnEntries = new Map();
   let maxCol = 0;
 
   for (const book of books) {
@@ -646,24 +646,62 @@ function placeBooks(books, edges, rows) {
     }
 
     const col = minCol;
-    const formatStacksInRow = rowFormatColStackSizes.get(row);
     const formatKey = isNovellaLike(book.format) ? "Novella" : "Novel";
-    if (!formatStacksInRow.has(formatKey)) {
-      formatStacksInRow.set(formatKey, new Map());
+    const columnKey = `${row}:${col}`;
+    if (!columnEntries.has(columnKey)) {
+      columnEntries.set(columnKey, { row, col, Novel: [], Novella: [] });
     }
 
-    const stacksByColForFormat = formatStacksInRow.get(formatKey);
-    const currentDepth = stacksByColForFormat.get(col) || 0;
-    stacksByColForFormat.set(col, currentDepth + 1);
+    // Books of one format sharing identical dependencies form one group.
+    const dependencyKey = (book.dependencies || [])
+      .map((dep) => `${dep.id}:${dep.type || LINK_TYPE_REQUIRED}`)
+      .sort()
+      .join(",");
+    const groups = columnEntries.get(columnKey)[formatKey];
+    let group = groups.find((candidate) => candidate.dependencyKey === dependencyKey);
+    if (!group) {
+      group = { dependencyKey, ids: [] };
+      groups.push(group);
+    }
+    group.ids.push(id);
 
-    const formatFlags = rowHasBothFormats.get(row);
-    const hasBothFormats = formatFlags.hasNovel && formatFlags.hasNovella;
-    const baseOffset = hasBothFormats ? (formatKey === "Novella" ? 1 : 0) : 0;
-    const stack = hasBothFormats ? (currentDepth * 2) + baseOffset : currentDepth;
-
-    positions.set(id, { row, col, stack });
-    rowSlotCounts[row] = Math.max(rowSlotCounts[row], stack + 1);
+    positions.set(id, { row, col, stack: 0 });
     maxCol = Math.max(maxCol, col);
+  }
+
+  for (const entry of columnEntries.values()) {
+    const formatFlags = rowHasBothFormats.get(entry.row);
+    const hasBothFormats = formatFlags.hasNovel && formatFlags.hasNovella;
+    const assign = (ids, startStack) => {
+      ids.forEach((bookId, index) => {
+        const stack = startStack + index;
+        positions.get(bookId).stack = stack;
+        rowSlotCounts[entry.row] = Math.max(rowSlotCounts[entry.row], stack + 1);
+      });
+    };
+
+    if (!hasBothFormats) {
+      let cursor = 0;
+      for (const formatKey of ["Novel", "Novella"]) {
+        for (const group of entry[formatKey]) {
+          assign(group.ids, cursor);
+          cursor += group.ids.length;
+        }
+      }
+      continue;
+    }
+
+    // Pair the k-th novel group with the k-th novella group; novellas sit directly below the novels.
+    const pairCount = Math.max(entry.Novel.length, entry.Novella.length);
+    let cursor = 0;
+    for (let k = 0; k < pairCount; k += 1) {
+      const novelIds = entry.Novel[k] ? entry.Novel[k].ids : [];
+      const novellaIds = entry.Novella[k] ? entry.Novella[k].ids : [];
+      const novelSize = Math.max(1, novelIds.length);
+      assign(novelIds, cursor);
+      assign(novellaIds, cursor + novelSize);
+      cursor += novelSize + Math.max(1, novellaIds.length);
+    }
   }
 
   return { positions, maxCol, rowSlotCounts };
@@ -784,22 +822,14 @@ function render(graph) {
 }
 
 function buildRowSlotHeights(graph, slotHeight, expandedSlotHeight) {
-  // Expands row slot height when German mode titles wrap into multiple lines.
-  const heights = [];
+  // Expands only slots containing a multi-line German title, keeping gaps between boxes uniform.
+  const heights = new Array(graph.rowLayout.totalSlots).fill(slotHeight);
 
-  for (let rowIndex = 0; rowIndex < graph.rows.length; rowIndex += 1) {
-    const rowHasMultiGermanTitle = state.isGerman && graph.books.some((book) => {
-      if (book.row !== rowIndex) {
-        return false;
+  if (state.isGerman) {
+    for (const book of graph.books) {
+      if (getBookTitleDisplay(book).lines.length > 1) {
+        heights[book.slotRow] = expandedSlotHeight;
       }
-      return getBookTitleDisplay(book).lines.length > 1;
-    });
-
-    const currentSlotHeight = rowHasMultiGermanTitle ? expandedSlotHeight : slotHeight;
-    const slotCount = graph.rowLayout.rowSlotCounts[rowIndex];
-
-    for (let slot = 0; slot < slotCount; slot += 1) {
-      heights.push(currentSlotHeight);
     }
   }
 
