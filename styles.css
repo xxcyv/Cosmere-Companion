@@ -5,12 +5,6 @@
   --muted: #525a64;
   --accent: #c8572a;
   --line: #2f3844;
-  --setting-mistborn: rgba(145, 120, 196, 0.17);
-  --setting-stormlight: rgba(122, 185, 255, 0.16);
-  --setting-elantris: rgba(255, 194, 110, 0.17);
-  --setting-nalthis: rgba(130, 204, 126, 0.18);
-  --setting-taldain: rgba(111, 188, 166, 0.18);
-  --setting-standalones: rgba(175, 204, 117, 0.17);
   --box-w: 170px;
   --box-h: 60px;
   --box-h-expanded: 92px;
@@ -236,10 +230,10 @@ body.is-panning {
 .row-band::after {
   content: "";
   position: absolute;
-  left: var(--series-col-w);
+  left: var(--label-w);
   right: 0;
   bottom: 0;
-  z-index: 12;
+  z-index: 9;
   pointer-events: none;
   border-bottom: 1px dashed #d9d2c8;
 }
@@ -276,7 +270,8 @@ body.is-panning {
   background: rgba(47, 56, 68, 0.09);
 }
 
-.row-band:not(:first-of-type) .row-label.series-start .row-label-series {
+.row-band:not(:first-of-type) .row-label.series-start .row-label-series,
+.row-band:not(:first-of-type) .row-label .row-label-setting {
   border-top: 1px solid rgba(47, 56, 68, 0.28);
 }
 
