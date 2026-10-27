@@ -2,8 +2,7 @@
 const board = document.getElementById("board");
 const template = document.getElementById("book-template");
 const linkModeFilter = document.getElementById("filter-link-mode");
-const novelsFilter = document.getElementById("filter-novels");
-const novellasFilter = document.getElementById("filter-novellas");
+const bookModeFilter = document.getElementById("filter-book-mode");
 const clearFocusBtn = document.getElementById("clear-focus");
 const germanModeToggle = document.getElementById("german-mode");
 const INTERACTIVE_ELEMENTS_SELECTOR = "button, input, select, textarea";
@@ -16,6 +15,9 @@ const LINK_MODE_ALL = "all";
 const LINK_MODE_REQUIRED = "required";
 const LINK_MODE_REQUIRED_RECOMMENDED = "required_recommended";
 const LINK_MODE_NICE_TO_HAVE = "nice_to_have";
+const BOOK_MODE_ALL = "all";
+const BOOK_MODE_NOVELS = "novels";
+const BOOK_MODE_NOVELLAS = "novellas";
 const FORMAT_NOVEL = "Novel";
 const FORMAT_NOVELLA = "Novella";
 const FORMAT_SHORT_STORY = "Short Story";
@@ -46,8 +48,10 @@ const uiRefs = {
   filterLinkAll: document.getElementById("filter-link-all"),
   filterLinkRequired: document.getElementById("filter-link-required"),
   filterLinkRequiredRecommended: document.getElementById("filter-link-required-recommended"),
-  filterNovelsLabel: document.getElementById("filter-novels-label"),
-  filterNovellasLabel: document.getElementById("filter-novellas-label"),
+  filterBookLabel: document.getElementById("filter-book-label"),
+  filterBookAll: document.getElementById("filter-book-all"),
+  filterBookNovels: document.getElementById("filter-book-novels"),
+  filterBookNovellas: document.getElementById("filter-book-novellas"),
 };
 
 // [element, copy key] pairs applied as plain text (or HTML for the notes below) on language change.
@@ -71,8 +75,10 @@ const TEXT_BINDINGS = [
   [uiRefs.filterLinkAll, "filterLinkAll"],
   [uiRefs.filterLinkRequired, "filterLinkRequired"],
   [uiRefs.filterLinkRequiredRecommended, "filterLinkRequiredRecommended"],
-  [uiRefs.filterNovelsLabel, "filterNovels"],
-  [uiRefs.filterNovellasLabel, "filterNovellas"],
+  [uiRefs.filterBookLabel, "filterBookLabel"],
+  [uiRefs.filterBookAll, "filterBookAll"],
+  [uiRefs.filterBookNovels, "filterBookNovels"],
+  [uiRefs.filterBookNovellas, "filterBookNovellas"],
   [clearFocusBtn, "clearFocus"],
 ];
 
@@ -86,8 +92,7 @@ const HTML_BINDINGS = [
 const state = {
   focusId: null,
   linkMode: LINK_MODE_ALL,
-  showNovelsOnly: false,
-  showNovellasOnly: false,
+  bookMode: BOOK_MODE_ALL,
   isGerman: false,
 };
 
@@ -120,8 +125,10 @@ const copy = {
     filterLinkAll: "All link types",
     filterLinkRequired: "Show only required links",
     filterLinkRequiredRecommended: "Show required + recommended links",
-    filterNovels: "Show only Novels",
-    filterNovellas: "Show only Novellas/Short Stories",
+    filterBookLabel: "Book display",
+    filterBookAll: "Show all books",
+    filterBookNovels: "Show only Novels",
+    filterBookNovellas: "Show only Novellas and Short Stories",
     clearFocus: "Clear selection",
     formats: {
       [FORMAT_NOVEL]: "Novel",
@@ -171,8 +178,10 @@ const copy = {
     filterLinkAll: "Alle Verknüpfungstypen",
     filterLinkRequired: "Nur Pflicht-Verknüpfungen anzeigen",
     filterLinkRequiredRecommended: "Pflicht- und empfohlene Verknüpfungen anzeigen",
-    filterNovels: "Nur Romane anzeigen",
-    filterNovellas: "Nur Novellen/Kurzgeschichten anzeigen",
+    filterBookLabel: "Bücher",
+    filterBookAll: "Alle Bücher anzeigen",
+    filterBookNovels: "Nur Romane anzeigen",
+    filterBookNovellas: "Nur Novellen und Kurzgeschichten anzeigen",
     clearFocus: "Auswahl zurücksetzen",
     formats: {
       [FORMAT_NOVEL]: "Roman",
@@ -228,21 +237,8 @@ async function init() {
       updateVisibility(graph);
     });
 
-    novelsFilter.addEventListener("change", () => {
-      state.showNovelsOnly = novelsFilter.checked;
-      if (state.showNovelsOnly && state.showNovellasOnly) {
-        state.showNovellasOnly = false;
-        novellasFilter.checked = false;
-      }
-      updateVisibility(graph);
-    });
-
-    novellasFilter.addEventListener("change", () => {
-      state.showNovellasOnly = novellasFilter.checked;
-      if (state.showNovellasOnly && state.showNovelsOnly) {
-        state.showNovelsOnly = false;
-        novelsFilter.checked = false;
-      }
+    bookModeFilter.addEventListener("change", () => {
+      state.bookMode = bookModeFilter.value;
       updateVisibility(graph);
     });
 
@@ -496,6 +492,9 @@ function createGraph(data) {
     }
   }
 
+  // Edges in a stable order so redraws always paint in the same sequence.
+  const drawOrderEdges = [...edges].sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
+
   const rows = buildRows(books, data);
   const placement = placeBooks(books, edges, rows);
   const rowLayout = buildRowLayout(placement.rowSlotCounts);
@@ -511,7 +510,9 @@ function createGraph(data) {
 
   return {
     books,
+    booksById,
     edges,
+    drawOrderEdges,
     rows: rows.rowItems,
     seriesPalette,
     rowLayout,
@@ -597,6 +598,7 @@ function buildRows(books, data) {
 function placeBooks(books, edges, rows) {
   // Places books into columns/stacks while respecting dependencies.
   const booksById = new Map(books.map((book) => [book.id, book]));
+  const rowIndexOf = (book) => rows.rowIndexByKey.get(getRowKey(book.series, book.setting));
   const incoming = new Map(books.map((b) => [b.id, []]));
   const outgoing = new Map(books.map((b) => [b.id, []]));
   const indegree = new Map(books.map((b) => [b.id, 0]));
@@ -618,8 +620,8 @@ function placeBooks(books, edges, rows) {
     zeroIndegreeIds.sort((idA, idB) => {
       const bookA = booksById.get(idA);
       const bookB = booksById.get(idB);
-      const rowA = rows.rowIndexByKey.get(getRowKey(bookA.series, bookA.setting));
-      const rowB = rows.rowIndexByKey.get(getRowKey(bookB.series, bookB.setting));
+      const rowA = rowIndexOf(bookA);
+      const rowB = rowIndexOf(bookB);
       if (rowA !== rowB) {
         return rowA - rowB;
       }
@@ -638,15 +640,14 @@ function placeBooks(books, edges, rows) {
   }
 
   const positions = new Map();
-  const rowHasBothFormats = new Map(rows.rowItems.map((_, idx) => [idx, { hasNovel: false, hasNovella: false }]));
+  const rowFormatFlags = new Map(rows.rowItems.map((_, idx) => [idx, { hasNovel: false, hasNovella: false }]));
   const rowSlotCounts = Array.from({ length: rows.rowItems.length }, () => 0);
   const columnEntries = new Map();
   let maxCol = 0;
 
   // Record which rows mix novels with novellas/short stories.
   for (const book of books) {
-    const row = rows.rowIndexByKey.get(getRowKey(book.series, book.setting));
-    const flags = rowHasBothFormats.get(row);
+    const flags = rowFormatFlags.get(rowIndexOf(book));
     if (book.format === FORMAT_NOVEL) {
       flags.hasNovel = true;
     }
@@ -658,7 +659,7 @@ function placeBooks(books, edges, rows) {
   // Column = one step right of the right-most prerequisite; books are then grouped per (row, column) cell.
   for (const id of topologicalOrderIds) {
     const book = booksById.get(id);
-    const row = rows.rowIndexByKey.get(getRowKey(book.series, book.setting));
+    const row = rowIndexOf(book);
     let col = 0;
 
     for (const pre of incoming.get(id)) {
@@ -690,7 +691,7 @@ function placeBooks(books, edges, rows) {
 
   // Assign vertical stack positions inside each cell.
   for (const entry of columnEntries.values()) {
-    const formatFlags = rowHasBothFormats.get(entry.row);
+    const formatFlags = rowFormatFlags.get(entry.row);
     const hasBothFormats = formatFlags.hasNovel && formatFlags.hasNovella;
     const assign = (ids, startStack) => {
       ids.forEach((bookId, index) => {
@@ -744,7 +745,7 @@ function render(graph) {
   board.style.gridTemplateRows = rowSlotHeights.map((height) => `${height}px`).join(" ");
   board.style.gridTemplateColumns = `var(--label-w) repeat(${graph.widthCols}, ${colWidth}px)`;
 
-  board.innerHTML = "";
+  board.replaceChildren();
 
   // Three stacked layers share the board grid: row bands (back), SVG edges, then book boxes (front).
   const bandsLayer = createGridLayer("bands-layer");
@@ -753,14 +754,17 @@ function render(graph) {
   const arrowsLayer = createArrowsLayer();
 
   const booksLayer = createGridLayer("books-layer");
+  const bookElements = new Map();
   for (const book of graph.books) {
-    booksLayer.append(createBookElement(graph, book));
+    const element = createBookElement(graph, book);
+    bookElements.set(book.id, element);
+    booksLayer.append(element);
   }
 
   board.append(bandsLayer, arrowsLayer, booksLayer);
 
   graph._svg = arrowsLayer;
-  graph._booksLayer = booksLayer;
+  graph._bookElements = bookElements;
   updateVisibility(graph);
 }
 
@@ -877,24 +881,21 @@ function buildRowSlotHeights(graph, slotHeight, expandedSlotHeight) {
 
 function updateVisibility(graph) {
   // Applies active filters and selection state to books and edges.
-  const bookEls = Array.from(graph._booksLayer.querySelectorAll(".book"));
   const relatedSet = state.focusId ? computeConnectedBooks(graph, state.focusId) : null;
   const directRelatedSet = rightClickSelectedIds.size > 0
-    ? computeDirectlyConnectedBooks(graph, rightClickSelectedIds, state.linkMode)
+    ? computeDirectlyConnectedBooks(graph, rightClickSelectedIds)
     : null;
 
   const visibleBookMap = new Map();
   for (const book of graph.books) {
-    const visible = !(state.showNovelsOnly && book.format !== FORMAT_NOVEL)
-      && !(state.showNovellasOnly && !isNovellaLike(book.format))
+    const visible = matchesBookMode(book)
       && (!relatedSet || relatedSet.has(book.id))
       && (!directRelatedSet || directRelatedSet.has(book.id));
 
     visibleBookMap.set(book.id, visible);
   }
 
-  for (const el of bookEls) {
-    const id = el.dataset.id;
+  for (const [id, el] of graph._bookElements) {
     const isVisible = visibleBookMap.get(id);
     const isSelected = id === state.focusId || rightClickSelectedIds.has(id);
     el.classList.toggle("faded", !isVisible);
@@ -917,27 +918,20 @@ function redrawEdges(graph, visibleBookMap) {
   }
 
   const boardRect = board.getBoundingClientRect();
-  const booksById = new Map();
-  for (const el of graph._booksLayer.querySelectorAll(".book")) {
-    booksById.set(el.dataset.id, el.getBoundingClientRect());
+  const rectsById = new Map();
+  for (const [id, el] of graph._bookElements) {
+    rectsById.set(id, el.getBoundingClientRect());
   }
 
   svg.setAttribute("width", `${board.scrollWidth}`);
   svg.setAttribute("height", `${board.scrollHeight}`);
   svg.setAttribute("viewBox", `0 0 ${board.scrollWidth} ${board.scrollHeight}`);
 
-  const sortedEdges = [...graph.edges].sort((a, b) => {
-    if (a.from !== b.from) {
-      return a.from.localeCompare(b.from);
-    }
-    return a.to.localeCompare(b.to);
-  });
-
   const visibleEdges = [];
 
-  for (const edge of sortedEdges) {
-    const src = booksById.get(edge.from);
-    const dst = booksById.get(edge.to);
+  for (const edge of graph.drawOrderEdges) {
+    const src = rectsById.get(edge.from);
+    const dst = rectsById.get(edge.to);
     if (!src || !dst) {
       continue;
     }
@@ -1018,12 +1012,30 @@ function assignAnchorSlots(groups, getOtherRect, getOtherId, setSlot) {
   }
 }
 
+function matchesBookMode(book) {
+  // Checks if a book passes the Book display filter.
+  if (state.bookMode === BOOK_MODE_NOVELS) {
+    return book.format === FORMAT_NOVEL;
+  }
+  if (state.bookMode === BOOK_MODE_NOVELLAS) {
+    return isNovellaLike(book.format);
+  }
+  return true;
+}
+
+function getActiveEdges(graph) {
+  // Edges that are currently drawable: the link type passes the Link display filter and both books pass the Book display filter.
+  return graph.edges.filter((edge) => matchesLinkMode(edge.type, state.linkMode)
+    && matchesBookMode(graph.booksById.get(edge.from))
+    && matchesBookMode(graph.booksById.get(edge.to)));
+}
+
 function computeConnectedBooks(graph, startId) {
-  // Returns full ancestor/descendant closure for a selected book.
+  // Returns the ancestor/descendant closure for a selected book, following only active edges.
   const outgoing = new Map(graph.books.map((b) => [b.id, new Set()]));
   const incoming = new Map(graph.books.map((b) => [b.id, new Set()]));
 
-  for (const edge of graph.edges) {
+  for (const edge of getActiveEdges(graph)) {
     outgoing.get(edge.from).add(edge.to);
     incoming.get(edge.to).add(edge.from);
   }
@@ -1034,19 +1046,15 @@ function computeConnectedBooks(graph, startId) {
   return new Set([...ancestors, ...descendants]);
 }
 
-function computeDirectlyConnectedBooks(graph, selectedIds, linkMode = LINK_MODE_ALL) {
-  // Finds directly readable right-side books from right-click selections.
+function computeDirectlyConnectedBooks(graph, selectedIds) {
+  // Finds directly readable right-side books from right-click selections, following only active edges.
   const selectedSet = selectedIds instanceof Set ? selectedIds : new Set(selectedIds);
   const related = new Set(selectedSet);
-  const booksById = new Map(graph.books.map((book) => [book.id, book]));
+  const booksById = graph.booksById;
   const incomingByTarget = new Map();
   const rightSideCandidates = new Set();
 
-  for (const edge of graph.edges) {
-    if (!matchesLinkMode(edge.type, linkMode)) {
-      continue;
-    }
-
+  for (const edge of getActiveEdges(graph)) {
     if (!incomingByTarget.has(edge.to)) {
       incomingByTarget.set(edge.to, []);
     }
