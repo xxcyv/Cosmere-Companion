@@ -60,6 +60,14 @@
     </section>
 
     <section class="controls" aria-label="filters">
+      <label class="control" for="filter-book-mode">
+        <span id="filter-book-label">Book display</span>
+        <select id="filter-book-mode">
+          <option value="all" id="filter-book-all">Show all books</option>
+          <option value="novels" id="filter-book-novels">Show only Novels</option>
+          <option value="novellas" id="filter-book-novellas">Show only Novellas and Short Stories</option>
+        </select>
+      </label>
       <label class="control" for="filter-link-mode">
         <span id="filter-link-label">Link display</span>
         <select id="filter-link-mode">
@@ -67,14 +75,6 @@
           <option value="required" id="filter-link-required">Show only required links</option>
           <option value="required_recommended" id="filter-link-required-recommended">Show required + recommended links</option>
         </select>
-      </label>
-      <label class="control">
-        <input type="checkbox" id="filter-novels" />
-        <span id="filter-novels-label">Show only Novels</span>
-      </label>
-      <label class="control">
-        <input type="checkbox" id="filter-novellas" />
-        <span id="filter-novellas-label">Show only Novellas</span>
       </label>
       <button id="clear-focus" type="button">Clear selected book</button>
     </section>
