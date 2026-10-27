@@ -177,6 +177,30 @@ window.BOOK_DATA = {
       ]
     },
     {
+      "id": "king-lopen-the-first-of-alethkar",
+      "title": "King Lopen the First of Alethkar",
+      "germanTitles": [],
+      "setting": "Roshar",
+      "series": "Stormlight Archive",
+      "format": "Short Story",
+      "arcanumUnbounded": false,
+      "dependencies": [
+        { "id": "words-of-radiance", "type": "required" }
+      ]
+    },
+    {
+      "id": "elsecaller",
+      "title": "Elsecaller",
+      "germanTitles": [],
+      "setting": "Roshar",
+      "series": "Stormlight Archive",
+      "format": "Short Story",
+      "arcanumUnbounded": false,
+      "dependencies": [
+        { "id": "words-of-radiance", "type": "required" }
+      ]
+    },
+    {
       "id": "oathbringer",
       "title": "Oathbringer",
       "germanTitles": ["Der Ruf der Klingen", "Die Splitter der Macht"],
