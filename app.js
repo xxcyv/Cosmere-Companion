@@ -21,6 +21,7 @@ const BOOK_MODE_NOVELLAS = "novellas";
 const FORMAT_NOVEL = "Novel";
 const FORMAT_NOVELLA = "Novella";
 const FORMAT_SHORT_STORY = "Short Story";
+const FORMAT_GRAPHIC_NOVEL = "Graphic Novel";
 const FALLBACK_ROW_BAND_COLOR = "rgba(160, 160, 160, 0.12)";
 
 // Centralized references for translatable UI text nodes.
@@ -149,6 +150,7 @@ const copy = {
       [FORMAT_NOVEL]: "Novel",
       [FORMAT_NOVELLA]: "Novella",
       [FORMAT_SHORT_STORY]: "Short Story",
+      [FORMAT_GRAPHIC_NOVEL]: "Graphic Novel",
     },
     series: {
       Mistborn: "Mistborn",
@@ -207,6 +209,7 @@ const copy = {
       [FORMAT_NOVEL]: "Roman",
       [FORMAT_NOVELLA]: "Novelle",
       [FORMAT_SHORT_STORY]: "Kurzgeschichte",
+      [FORMAT_GRAPHIC_NOVEL]: "Graphic Novel",
     },
     series: {
       Mistborn: "Die Nebelgeborenen",
@@ -468,6 +471,11 @@ function getFormatLabel(format) {
   return getCopy().formats[format] || format;
 }
 
+function isNovelLike(format) {
+  // Treat graphic novels like novels for filtering/layout.
+  return format === FORMAT_NOVEL || format === FORMAT_GRAPHIC_NOVEL;
+}
+
 function isNovellaLike(format) {
   // Treat short stories like novellas for filtering/layout.
   return format === FORMAT_NOVELLA || format === FORMAT_SHORT_STORY;
@@ -698,7 +706,7 @@ function placeBooks(books, edges, rows) {
   // Record which rows mix novels with novellas/short stories.
   for (const book of books) {
     const flags = rowFormatFlags.get(rowIndexOf(book));
-    if (book.format === FORMAT_NOVEL) {
+    if (isNovelLike(book.format)) {
       flags.hasNovel = true;
     }
     if (isNovellaLike(book.format)) {
@@ -1069,7 +1077,7 @@ function assignAnchorSlots(groups, getOtherRect, getOtherId, setSlot) {
 function matchesBookMode(book) {
   // Checks if a book passes the Book display filter.
   if (state.bookMode === BOOK_MODE_NOVELS) {
-    return book.format === FORMAT_NOVEL;
+    return isNovelLike(book.format);
   }
   if (state.bookMode === BOOK_MODE_NOVELLAS) {
     return isNovellaLike(book.format);

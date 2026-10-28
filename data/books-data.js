@@ -237,7 +237,8 @@ window.BOOK_DATA = {
       "dependencies": [
         { "id": "oathbringer", "type": "required" },
         { "id": "dawnshard", "type": "nice_to_have" },
-        { "id": "mistborn-secret-history", "type": "nice_to_have" }
+        { "id": "mistborn-secret-history", "type": "nice_to_have" },
+        { "id": "white-sand", "type": "nice_to_have" }
       ]
     },
     {
@@ -318,11 +319,9 @@ window.BOOK_DATA = {
       "germanTitles": ["Weißer Sand"],
       "setting": "Taldain",
       "series": "Standalones",
-      "format": "Novel",
+      "format": "Graphic Novel",
       "arcanumUnbounded": false,
-      "dependencies": [
-        { "id": "alloy-of-law", "type": "recommended" }
-      ]
+      "dependencies": []
     },
     {
       "id": "sixth-of-the-dusk",

@@ -48,8 +48,10 @@ Supported formats:
 - `Novel`
 - `Novella`
 - `Short Story`
+- `Graphic Novel`
 
 `Short Story` is handled like `Novella` in filtering and lane behavior.
+`Graphic Novel` is handled like `Novel` in filtering and lane behavior.
 
 Format filters:
 
@@ -153,7 +155,7 @@ Each book supports:
 - `germanTitles` (string[])
 - `setting` (string)
 - `series` (string)
-- `format` (`Novel`, `Novella`, `Short Story`)
+- `format` (`Novel`, `Novella`, `Short Story`, `Graphic Novel`)
 - `arcanumUnbounded` (boolean)
 - `dependencies` (array of `{ id, type }`)
 
