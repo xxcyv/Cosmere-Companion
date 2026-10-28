@@ -99,7 +99,8 @@ Legend includes:
 
 - Series-based row background coloring.
 - Prominent selected-book highlighting.
-- Drag-to-pan on the board surface.
+- Drag-to-pan on the board surface (no text gets selected while dragging).
+- Alt+click a box to select and copy its title without triggering the click filters.
 - Responsive layout for smaller screens.
 
 ## User Manual

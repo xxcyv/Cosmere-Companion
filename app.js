@@ -41,9 +41,14 @@ const uiRefs = {
   legendGermanBlock: document.getElementById("legend-german-note-block"),
   legendGermanTitle: document.getElementById("legend-german-title"),
   legendGermanText: document.getElementById("legend-german-text"),
+  legendControlsTitle: document.getElementById("legend-controls-title"),
   legendClickTitle: document.getElementById("legend-click-title"),
   legendClickLeftText: document.getElementById("legend-click-left-text"),
   legendClickRightText: document.getElementById("legend-click-right-text"),
+  legendCopyTitle: document.getElementById("legend-copy-title"),
+  legendCopyText: document.getElementById("legend-copy-text"),
+  legendPanTitle: document.getElementById("legend-pan-title"),
+  legendPanText: document.getElementById("legend-pan-text"),
   filterLinkLabel: document.getElementById("filter-link-label"),
   filterLinkAll: document.getElementById("filter-link-all"),
   filterLinkRequired: document.getElementById("filter-link-required"),
@@ -68,9 +73,14 @@ const TEXT_BINDINGS = [
   [uiRefs.legendNiceText, "niceText"],
   [uiRefs.legendArcanumTitle, "arcanumTitle"],
   [uiRefs.legendGermanTitle, "germanTitle"],
+  [uiRefs.legendControlsTitle, "controlsTitle"],
   [uiRefs.legendClickTitle, "clickTitle"],
   [uiRefs.legendClickLeftText, "clickLeftText"],
   [uiRefs.legendClickRightText, "clickRightText"],
+  [uiRefs.legendCopyTitle, "copyTitle"],
+  [uiRefs.legendCopyText, "copyText"],
+  [uiRefs.legendPanTitle, "panTitle"],
+  [uiRefs.legendPanText, "panText"],
   [uiRefs.filterLinkLabel, "filterLinkLabel"],
   [uiRefs.filterLinkAll, "filterLinkAll"],
   [uiRefs.filterLinkRequired, "filterLinkRequired"],
@@ -118,9 +128,14 @@ const copy = {
     arcanumText: "<sup>AU</sup> - Entries are included in Arcanum Unbounded.",
     germanTitle: "German Availability",
     germanText: "<sup>E</sup> - Entries are not available in German.",
+    controlsTitle: "Controls",
     clickTitle: "Selection Filtering",
     clickLeftText: "Left-click: Shows the full dependency overview for a specific book.",
     clickRightText: "Right-click: Select all books you've already read to see the next readable books.",
+    copyTitle: "Copying Titles",
+    copyText: "Alt+Click: Copies the selected book title to the clipboard.",
+    panTitle: "Moving the Diagram",
+    panText: "You can move the diagram sideways by dragging it with the cursor.",
     filterLinkLabel: "Link display",
     filterLinkAll: "All link types",
     filterLinkRequired: "Show only required links",
@@ -171,9 +186,14 @@ const copy = {
     arcanumText: "<sup>AU</sup> - Einträge sind in Arcanum Unbounded enthalten.",
     germanTitle: "Hinweis",
     germanText: "<sup>E</sup> - Einträge sind nicht auf Deutsch verfügbar.",
+    controlsTitle: "Steuerung",
     clickTitle: "Auswahl-Filter",
     clickLeftText: "Linksklick: Zeigt die vollständige Abhängigkeitsübersicht für ein bestimmtes Buch.",
     clickRightText: "Rechtsklick: Wähle alle Bücher aus, die du bereits gelesen hast, um die nächsten lesbaren Bücher zu sehen.",
+    copyTitle: "Titel kopieren",
+    copyText: "Alt+Klick: Kopiert den ausgewählten Buchtitel in die Zwischenablage.",
+    panTitle: "Diagramm verschieben",
+    panText: "Du kannst das Diagramm seitlich verschieben, indem du es mit dem Cursor ziehst.",
     filterLinkLabel: "Verknüpfungen",
     filterLinkAll: "Alle Verknüpfungstypen",
     filterLinkRequired: "Nur Pflicht-Verknüpfungen anzeigen",
@@ -274,6 +294,17 @@ function setupDragToPan(container) {
       return;
     }
 
+    // Reset any previous box text selection.
+    window.getSelection().removeAllRanges();
+    container.querySelector(".book.text-selectable")?.classList.remove("text-selectable");
+
+    // Alt+click on a box selects its text instead of panning.
+    const bookEl = event.target.closest(".book");
+    if (event.altKey && bookEl) {
+      bookEl.classList.add("text-selectable");
+      return;
+    }
+
     if (event.target.closest(INTERACTIVE_ELEMENTS_SELECTOR)) {
       return;
     }
@@ -285,6 +316,21 @@ function setupDragToPan(container) {
     startScrollLeft = container.scrollLeft;
     startScrollTop = container.scrollTop;
     container.setPointerCapture(event.pointerId);
+  });
+
+  // Boxes are buttons and can't be drag-selected, so Alt+click selects and copies the title.
+  container.addEventListener("mousedown", (event) => {
+    const bookEl = event.target.closest(".book");
+    const titleEl = bookEl?.querySelector(".book-title-list");
+    if (event.button !== 0 || !event.altKey || !titleEl) {
+      return;
+    }
+    event.preventDefault();
+    const range = document.createRange();
+    range.selectNodeContents(titleEl);
+    const selection = window.getSelection();
+    selection.addRange(range);
+    navigator.clipboard.writeText(selection.toString()).catch(() => document.execCommand("copy"));
   });
 
   container.addEventListener("pointermove", (event) => {
@@ -852,7 +898,11 @@ function createBookElement(graph, book) {
   item.innerHTML = `<span class="book-title-list">${titleLinesHtml}</span><span class="meta">${escapeHtml(getFormatLabel(book.format))}</span>`;
 
   // Left-click toggles the dependency focus; right-click toggles the "already read" selection.
-  item.addEventListener("click", () => {
+  item.addEventListener("click", (event) => {
+    // Alt+click/drag is reserved for text selection.
+    if (event.altKey || item.classList.contains("text-selectable")) {
+      return;
+    }
     state.focusId = state.focusId === book.id ? null : book.id;
     updateVisibility(graph);
   });

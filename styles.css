@@ -100,6 +100,13 @@ body {
   color: var(--muted);
 }
 
+.legend-block h3 {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
 .legend-items {
   display: flex;
   flex-wrap: wrap;
@@ -213,6 +220,13 @@ body.german-mode .legend-line-styles .legend-item {
   overflow: auto;
   max-width: 100%;
   cursor: grab;
+  user-select: none;
+}
+
+/* Alt+drag on a box enables text selection for that box only. */
+.board .book.text-selectable {
+  user-select: text;
+  cursor: text;
 }
 
 .board.dragging {
