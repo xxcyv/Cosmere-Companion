@@ -381,6 +381,16 @@ window.BOOK_DATA = {
       "dependencies": [
         { "id": "sixth-of-the-dusk", "type": "required" }
       ]
+    },
+    {
+      "id": "the-fires-of-december",
+      "title": "The Fires of December",
+      "germanTitles": [],
+      "setting": "Miral",
+      "series": "Standalones",
+      "format": "Novel",
+      "arcanumUnbounded": false,
+      "dependencies": []
     }
   ]
 };
